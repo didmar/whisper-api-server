@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  whisper-api:
+    image: didmar/whisper-api-server
+    build: .
+    container_name: whisper-api-server
+    restart: unless-stopped
+    init: true
+    ports:
+      - 8000:8000

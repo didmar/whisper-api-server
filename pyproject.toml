@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "whisper-api-server"
+version = "0.1.0"
+description = "A drop-in replacement for OpenAI's Whisper API, running locally."
+authors = ["Didier Marin <mail@didiermarin.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+uvicorn = "^0.25.0"
+fastapi = "^0.105.0"
+python-multipart = "^0.0.6"
+openai-whisper = "^20231117"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.1.9"
+black = "^23.12.1"
+pre-commit = "^3.6.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
