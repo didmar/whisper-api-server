@@ -29,8 +29,18 @@ python3 main.py
 
 ## Usage
 
+Check out the API documentation at http://localhost:8000/docs.
+
+For example:
 ```bash
-curl http://localhost:8000/ 
+curl -sSfLO https://upload.wikimedia.org/wikipedia/commons/2/2b/American_English_sound_%22h%22_%28female%29.wav
+
+curl --request POST \
+  --url "http://localhost:8000/v1/audio/transcriptions" \
+  --header 'Content-Type: multipart/form-data' \
+  --form file=@American_English_sound_%22h%22_%28female%29.wav \
+  --form model=whisper-1
+# {"text":" Hot hole high. Hu. Hu. Hu. Behind. Hu. Hu."}
 ```
 
 ## Development setup
