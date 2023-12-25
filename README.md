@@ -13,6 +13,14 @@ Modified from https://github.com/morioka/tiny-openai-whisper-api.
 Install [Docker](https://docs.docker.com/engine/install/), then run:
 
 ```bash
+docker build -t didmar/whisper-api-server .
+docker run -d -p 127.0.0.1:8000:8000 didmar/whisper-api-server --workers 1
+# Customize number of workers is needs to handle multiple requests in parallel
+```
+
+Or use Docker compose:
+
+```bash
 docker compose up --build -d
 ```
 

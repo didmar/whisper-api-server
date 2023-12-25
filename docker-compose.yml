@@ -7,5 +7,8 @@ services:
     container_name: whisper-api-server
     restart: unless-stopped
     init: true
+    volumes:
+      - ./.cache:/root/.cache
+    command: --workers 1
     ports:
       - 8000:8000
