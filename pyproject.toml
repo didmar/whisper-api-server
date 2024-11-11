@@ -9,13 +9,13 @@ readme = "README.md"
 python = "^3.10"
 uvicorn = "^0.25.0"
 fastapi = "^0.105.0"
-python-multipart = "^0.0.6"
+python-multipart = "^0.0.7"
 openai-whisper = "^20231117"
 
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.1.9"
-black = "^23.12.1"
+black = "^24.3.0"
 pre-commit = "^3.6.0"
 
 [build-system]
