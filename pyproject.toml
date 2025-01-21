@@ -9,7 +9,7 @@ readme = "README.md"
 python = "^3.10"
 uvicorn = "^0.25.0"
 fastapi = "^0.105.0"
-python-multipart = "^0.0.7"
+python-multipart = "^0.0.17"
 openai-whisper = "^20231117"
 
 
