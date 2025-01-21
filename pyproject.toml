@@ -10,7 +10,7 @@ python = "^3.10"
 uvicorn = "^0.25.0"
 fastapi = "^0.105.0"
 python-multipart = "^0.0.18"
-openai-whisper = "^20231117"
+faster-whisper = "^1.1.1"
 
 
 [tool.poetry.group.dev.dependencies]

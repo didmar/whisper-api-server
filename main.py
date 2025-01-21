@@ -6,14 +6,18 @@ import os
 import shutil
 from datetime import timedelta
 from functools import lru_cache
-from typing import Optional
+from typing import Iterable, Optional, Tuple
 
-import numpy as np
 import uvicorn
-import whisper
+from faster_whisper import WhisperModel
+from faster_whisper.transcribe import Segment, TranscriptionInfo
 from fastapi import FastAPI, Form, UploadFile, File
 from fastapi import HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+
+MODEL_SIZE = os.getenv("MODEL_SIZE", "base")
+DEVICE = os.getenv("DEVICE", "auto")
+COMPUTE_TYPE = os.getenv("COMPUTE_TYPE", "default")
 
 app = FastAPI()
 
@@ -29,52 +33,26 @@ app.add_middleware(
 
 
 @lru_cache(maxsize=1)
-def get_whisper_model(whisper_model: str):
+def get_whisper_model(model_size: str):
     """Get a whisper model from the cache or download it if it doesn't exist"""
-    model = whisper.load_model(whisper_model)
+    model = WhisperModel(model_size, device=DEVICE, compute_type=COMPUTE_TYPE)
     return model
 
 
-def transcribe(audio_path: str, whisper_model: str, **whisper_args):
+def transcribe(
+    audio_path: str, whisper_model: str, **whisper_args
+) -> Tuple[Iterable[Segment], TranscriptionInfo]:
     """Transcribe the audio file using whisper"""
 
     # Get whisper model
     # NOTE: If multiple models are selected, this may keep all of them in memory depending on the cache size
     transcriber = get_whisper_model(whisper_model)
 
-    # Set configs & transcribe
-    if whisper_args["temperature_increment_on_fallback"] is not None:
-        whisper_args["temperature"] = tuple(
-            np.arange(
-                whisper_args["temperature"],
-                1.0 + 1e-6,
-                whisper_args["temperature_increment_on_fallback"],
-            )
-        )
-    else:
-        whisper_args["temperature"] = [whisper_args["temperature"]]
-
-    del whisper_args["temperature_increment_on_fallback"]
-
-    transcript = transcriber.transcribe(
+    return transcriber.transcribe(
         audio_path,
         **whisper_args,
     )
 
-    return transcript
-
-
-WHISPER_DEFAULT_SETTINGS = {
-    "whisper_model": "base",
-    "temperature": 0.0,
-    "temperature_increment_on_fallback": 0.2,
-    "no_speech_threshold": 0.6,
-    "logprob_threshold": -1.0,
-    "compression_ratio_threshold": 2.4,
-    "condition_on_previous_text": True,
-    "verbose": False,
-    "task": "transcribe",
-}
 
 UPLOAD_DIR = "tmp"
 
@@ -119,31 +97,35 @@ async def transcriptions(
     with open(upload_name, "wb+") as upload_file:
         shutil.copyfileobj(fileobj, upload_file)
 
-    whisper_args = WHISPER_DEFAULT_SETTINGS.copy()
+    whisper_args = {
+        "whisper_model": MODEL_SIZE,
+    }
     if settings_override is not None:
         whisper_args.update(settings_override)
 
-    transcript = transcribe(audio_path=upload_name, **whisper_args)
+    segments, _ = transcribe(audio_path=upload_name, **whisper_args)
 
-    if response_format in ["text"]:
-        return transcript["text"]
+    if response_format in ["text", "json"]:
+        return {
+            "text": "\n".join(seg.text for seg in segments),
+        }
 
     if response_format in ["srt"]:
         ret = ""
-        for seg in transcript["segments"]:
-            td_s = timedelta(milliseconds=seg["start"] * 1000)
-            td_e = timedelta(milliseconds=seg["end"] * 1000)
+        for seg in segments:
+            td_s = timedelta(milliseconds=seg.start * 1000)
+            td_e = timedelta(milliseconds=seg.end * 1000)
 
             t_s = f"{td_s.seconds//3600:02}:{(td_s.seconds//60)%60:02}:{td_s.seconds%60:02}.{td_s.microseconds//1000:03}"
             t_e = f"{td_e.seconds//3600:02}:{(td_e.seconds//60)%60:02}:{td_e.seconds%60:02}.{td_e.microseconds//1000:03}"
 
-            ret += "{}\n{} --> {}\n{}\n\n".format(seg["id"], t_s, t_e, seg["text"])
+            ret += "{}\n{} --> {}\n{}\n\n".format(seg.id, t_s, t_e, seg.text)
         ret += "\n"
         return ret
 
     if response_format in ["vtt"]:
         ret = "WEBVTT\n\n"
-        for seg in transcript["segments"]:
+        for seg in segments:
             td_s = timedelta(milliseconds=seg["start"] * 1000)
             td_e = timedelta(milliseconds=seg["end"] * 1000)
 
@@ -153,12 +135,21 @@ async def transcriptions(
             ret += "{} --> {}\n{}\n\n".format(t_s, t_e, seg["text"])
         return ret
 
-    if response_format in ["verbose_json"]:
-        transcript.setdefault("task", whisper_args["task"])
-        transcript.setdefault("duration", transcript["segments"][-1]["end"])
-        return transcript
+    if response_format in ["json"]:
+        raise NotImplementedError("Json format not implemented")
 
-    return {"text": transcript["text"]}
+    if response_format in ["verbose_json"]:
+        segments_list = list(segments)
+        return {
+            "text": "\n".join(seg.text for seg in segments_list),
+            "task": "transcribe",
+            "duration": segments_list[-1].end,
+        }
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Bad Request, bad response_format",
+    )
 
 
 if __name__ == "__main__":
