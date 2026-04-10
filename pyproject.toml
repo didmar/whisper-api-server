@@ -1,23 +1,28 @@
-[tool.poetry]
+[project]
 name = "whisper-api-server"
 version = "0.2.0"
 description = "A drop-in replacement for OpenAI's Whisper API, running locally."
-authors = ["Didier Marin <mail@didiermarin.com>"]
+authors = [{ name = "Didier Marin", email = "mail@didiermarin.com" }]
 readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "uvicorn>=0.25.0",
+    "fastapi>=0.105.0",
+    "python-multipart>=0.0.18",
+    "faster-whisper>=1.1.1",
+]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-uvicorn = "^0.25.0"
-fastapi = "^0.105.0"
-python-multipart = "^0.0.18"
-faster-whisper = "^1.1.1"
+[dependency-groups]
+dev = [
+    "ruff>=0.11.0",
+    "pre-commit>=3.6.0",
+]
 
+[tool.uv]
+package = false
 
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.1.9"
-black = "^24.3.0"
-pre-commit = "^3.6.0"
+[tool.ruff]
+line-length = 88
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.ruff.format]
+quote-style = "double"

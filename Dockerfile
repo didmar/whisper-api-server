@@ -1,27 +1,28 @@
-FROM python:3.10.10
+FROM python:3.12-slim
 
-# Run updates and install ffmpeg
+# Install ffmpeg
 RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y ffmpeg && \
+    apt-get install -y --no-install-recommends ffmpeg && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy and install the requirements
-COPY ./requirements.txt /requirements.txt
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Pip install the dependencies (using cache)
-RUN --mount=type=cache,mode=0755,target=/root/.cache/pip pip install --upgrade pip
-RUN --mount=type=cache,mode=0755,target=/root/.cache/pip pip install -r /requirements.txt
-
-# Copy the current directory contents into the container at /app
-COPY main.py /app/main.py
+# Copy dependency files
+COPY pyproject.toml uv.lock /app/
 
 # Set the working directory to /app
 WORKDIR /app
+
+# Install dependencies (using cache)
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev --no-install-project
+
+# Copy the current directory contents into the container at /app
+COPY main.py /app/main.py
 
 # Expose port 8000
 EXPOSE 8000
 
 # Run the app
-ENTRYPOINT ["uvicorn", "main:app", "--host", "0.0.0.0"]
+ENTRYPOINT ["uv", "run", "--no-dev", "uvicorn", "main:app", "--host", "0.0.0.0"]
