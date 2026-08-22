@@ -10,6 +10,7 @@ from typing import Iterable, Optional, Tuple
 
 import uvicorn
 from faster_whisper import WhisperModel
+from faster_whisper.tokenizer import _LANGUAGE_CODES
 from faster_whisper.transcribe import Segment, TranscriptionInfo
 from fastapi import FastAPI, Form, UploadFile, File
 from fastapi import HTTPException, status
@@ -63,6 +64,7 @@ async def transcriptions(
     file: UploadFile = File(...),
     response_format: Optional[str] = Form(None),
     temperature: Optional[float] = Form(None),
+    language: Optional[str] = Form(None),
     settings_override: Optional[dict] = Form(None),
 ):
     assert model == "whisper-1"
@@ -88,6 +90,12 @@ async def transcriptions(
             detail="Bad Request, bad temperature",
         )
 
+    if language is not None and language not in _LANGUAGE_CODES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bad Request, bad language",
+        )
+
     filename = file.filename
     fileobj = file.file
     upload_name = os.path.join(UPLOAD_DIR, filename)
@@ -102,6 +110,8 @@ async def transcriptions(
     }
     if settings_override is not None:
         whisper_args.update(settings_override)
+    if language is not None:
+        whisper_args["language"] = language
 
     segments, _ = transcribe(audio_path=upload_name, **whisper_args)
 
