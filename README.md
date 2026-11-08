@@ -51,21 +51,36 @@ curl --request POST \
 # {"text":" Hot hole high. Hu. Hu. Hu. Behind. Hu. Hu."}
 ```
 
-## Development setup
+### Language
 
-We use [Poetry](https://python-poetry.org/) to manage dependencies, [Ruff](https://docs.astral.sh/ruff/) for linting and [Black](https://black.readthedocs.io/en/stable/) for formatting.
+An optional `language` form field accepts an ISO 639-1 language code (for
+example `pl`) and forces faster-whisper to transcribe with that language
+instead of running automatic language detection.
 
-The `poetry.lock` file is committed to the repository.
-When adding a new dependency, use `poetry add <package>` and commit the updated `poetry.lock` file.
-If the dependency is only needed for development, add the `--dev` flag.
+- Omitting the field keeps automatic detection.
+- An invalid code is rejected deterministically with `400 Bad Request`.
 
 ```bash
-# Automatically update the dependencies to the latest compatible version
-poetry update
+curl --request POST \
+  --url "http://localhost:8000/v1/audio/transcriptions" \
+  --header 'Content-Type: multipart/form-data' \
+  --form file=@polski.wav \
+  --form model=whisper-1 \
+  --form language=pl
+```
 
-# Use the export commands to update the frozen requirements files
-poetry export -f requirements.txt --output requirements.txt
-poetry export --only dev -f requirements.txt --output dev-requirements.txt
+## Development setup
+
+We use [uv](https://docs.astral.sh/uv/) to manage dependencies,
+[Ruff](https://docs.astral.sh/ruff/) for linting and formatting, and
+[pytest](https://docs.pytest.org/) for tests.
+
+```bash
+# Install dependencies (including development dependencies)
+uv sync --dev
+
+# Run tests
+uv run pytest
 
 # Setup pre-commit hooks (See https://pre-commit.com/)
 pre-commit install
